@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat - Smart Gladi</title>
+    <title>Smart Gladiator</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="<?= base_url('css/theme.css') ?>">
@@ -253,39 +253,58 @@
             });
         });
 
+        let usePolling = false;
+        let pollingInterval = null;
+
         function connectWebSocket() {
-            ws = new WebSocket('ws://127.0.0.1:8080');
-            
-            ws.onopen = function() {
-                ws.send(JSON.stringify({
-                    type: 'auth',
-                    user_id: <?= session()->get('user_id') ?>
-                }));
-            };
-            
-            ws.onmessage = function(e) {
-                const data = JSON.parse(e.data);
-                if (data.type === 'message' && (data.sender_id == currentReceiverId || data.receiver_id == currentReceiverId)) {
-                    const messageHtml = `
-                        <div class="message received">
-                            <div class="message-bubble">
-                                ${escapeHtml(data.message)}
-                                <br><small style="opacity: 0.7; font-size: 0.75em;">${formatTime(data.created_at)}</small>
+            try {
+                ws = new WebSocket('ws://127.0.0.1:8080');
+                
+                ws.onopen = function() {
+                    usePolling = false;
+                    if (pollingInterval) clearInterval(pollingInterval);
+                    ws.send(JSON.stringify({
+                        type: 'auth',
+                        user_id: <?= session()->get('user_id') ?>
+                    }));
+                };
+                
+                ws.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'message' && (data.sender_id == currentReceiverId || data.receiver_id == currentReceiverId)) {
+                        const messageHtml = `
+                            <div class="message received">
+                                <div class="message-bubble">
+                                    ${escapeHtml(data.message)}
+                                    <br><small style="opacity: 0.7; font-size: 0.75em;">${formatTime(data.created_at)}</small>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    $('#chatMessages').append(messageHtml);
-                    $('#chatMessages').scrollTop($('#chatMessages')[0].scrollHeight);
-                }
-            };
-            
-            ws.onerror = function() {
-                setTimeout(connectWebSocket, 3000);
-            };
-            
-            ws.onclose = function() {
-                setTimeout(connectWebSocket, 3000);
-            };
+                        `;
+                        $('#chatMessages').append(messageHtml);
+                        $('#chatMessages').scrollTop($('#chatMessages')[0].scrollHeight);
+                    }
+                };
+                
+                ws.onerror = function() {
+                    usePolling = true;
+                    startPolling();
+                };
+                
+                ws.onclose = function() {
+                    usePolling = true;
+                    startPolling();
+                };
+            } catch(e) {
+                usePolling = true;
+                startPolling();
+            }
+        }
+        
+        function startPolling() {
+            if (pollingInterval) return;
+            pollingInterval = setInterval(() => {
+                if (currentReceiverId) loadMessages();
+            }, 3000);
         }
         
         connectWebSocket();
