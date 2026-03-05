@@ -80,8 +80,13 @@
             },
             interactivity: {
                 detect_on: 'canvas',
-                events: { onhover: { enable: true, mode: 'repulse' }, onclick: { enable: true, mode: 'push' }, resize: true },
-                modes: { repulse: { distance: 100, duration: 0.4 }, push: { particles_nb: 4 } }
+                events: { onhover: { enable: true, mode: ['grab', 'bubble'] }, onclick: { enable: true, mode: 'push' }, resize: true },
+                modes: { 
+                    grab: { distance: 200, line_linked: { opacity: 0.8 } },
+                    bubble: { distance: 200, size: 6, duration: 0.3, opacity: 0.8 },
+                    repulse: { distance: 100, duration: 0.4 }, 
+                    push: { particles_nb: 4 } 
+                }
             },
             retina_detect: true
         });
